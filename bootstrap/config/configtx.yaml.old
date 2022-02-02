@@ -1,0 +1,322 @@
+# configtx
+
+#   CAPABILITIES
+Capabilities:
+  Application: &ApplicationCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Channel: &ChannelCapabilities
+    V2_0: true
+
+# ORGANIZATIONS
+Organizations:
+  - &Orderer
+    Name: OrdererMSP
+    SkipAsForeign: false
+    ID: OrdererMSP
+    MSPDir: ../organizations/ordererOrganizations/scada.com/msp
+    Policies: &OrdererPolicies
+      Readers:
+          Type: Signature
+          Rule: "OR('OrdererMSP.member')"
+      Writers:
+          Type: Signature
+          Rule: "OR('OrdererMSP.member')"
+      Admins:
+          Type: Signature
+          Rule: "OR('OrdererMSP.member')"
+      Endorsement:
+          Type: Signature
+          Rule: "OR('OrdererMSP.member')"
+
+  - &Org1
+    Name: Org1MSP
+    ID: Org1MSP
+    MSPDir: ../organizations/peerOrganizations/org1.scada.com/msp
+    Policies: &ScadaPolicies
+      Readers:
+          Type: Signature
+          Rule: "OR('Org1MSP.member')"
+      Writers:
+          Type: Signature
+          Rule: "OR('Org1MSP.member')"
+      Admins:
+          Type: Signature
+          # UPDATE: Dec 15, 2019 - This is a dev env so its OK in Prod ... use AcmeMSP.admin
+          Rule: "OR('Org1MSP.member')"
+      Endorsement:
+          Type: Signature
+          Rule: "OR('Org1MSP.member')"
+    AnchorPeers:
+      - Host: peer0.org1.scada.com
+        Port: 7051
+      #- Host: peer1.org1.scada.com
+      #  Port: 8051
+      #- Host: peer2.org1.scada.com
+      #  Port: 9051
+      #- Host: peer3.org1.scada.com
+      #  Port: 10051
+      #- Host: peer4.org1.scada.com
+      #  Port: 11051
+      #- Host: peer5.org1.scada.com
+      #  Port: 12051
+      #- Host: peer6.org1.scada.com
+      #  Port: 13051
+      #- Host: peer7.org1.scada.com
+      #  Port: 14051
+      #- Host: peer8.org1.scada.com
+      #  Port: 15051
+      #- Host: peer9.org1.scada.com
+      #  Port: 16051
+
+#   ORDERER
+Orderer: &OrdererDefaults
+
+  OrdererType: etcdraft
+
+  EtcdRaft:
+    Consenters:
+    - Host: orderer0.scada.com
+      ClientTLSCert: ../organizations/ordererOrganizations/scada.com/orderers/orderer0.scada.com/tls/server.crt
+      ServerTLSCert: ../organizations/ordererOrganizations/scada.com/orderers/orderer0.scada.com/tls/server.crt
+      Port: 7050
+    #- Host: orderer1.scada.com
+    #  ClientTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer1.scada.com/tls/server.crt
+    #  ServerTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer1.scada.com/tls/server.crt
+    #  Port: 7050
+    #- Host: orderer2.scada.com
+    #  ClientTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer2.scada.com/tls/server.crt
+    #  ServerTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer2.scada.com/tls/server.crt
+    #  Port: 7050
+    #- Host: orderer3.scada.com
+    #  ClientTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer3.scada.com/tls/server.crt
+    #  ServerTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer3.scada.com/tls/server.crt
+    #  Port: 7050
+    #- Host: orderer4.example.com
+    #  ClientTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer4.scada.com/tls/server.crt
+    #  ServerTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer4.scada.com/tls/server.crt
+    #  Port: 7050
+
+  Addresses:
+    - orderer0.scada.com:7050
+    #- orderer1.scada.com:7050
+    #- orderer2.scada.com:7050
+    #- orderer3.scada.com:7050
+    #- orderer4.scada.com:7050
+
+    # Policies for Orderer
+  Policies:
+    Readers:
+        Type: ImplicitMeta
+        Rule: "ANY Readers"
+    Writers:
+        Type: ImplicitMeta
+        Rule: "ANY Writers"
+    Admins:
+        Type: ImplicitMeta  
+        # UPDATED December 15, 2019
+        Rule: "ANY Admins"
+        # Rule: "MAJORITY Admins"
+
+    # BlockValidation specifies what signatures must be included in the block
+    # from the orderer for the peer to validate it.
+    BlockValidation:
+        Type: ImplicitMeta
+        Rule: "ANY Writers"
+
+  # Batch Timeout: The amount of time to wait before creating a batch
+  BatchTimeout: 2s
+
+  # Batch Size: Controls the number of messages batched into a block
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 98 MB
+    PreferredMaxBytes: 512 KB
+
+
+
+  Capabilities:
+    <<: *OrdererCapabilities
+
+
+Application: &ApplicationDefaults
+
+  ACLs: &ACLsDefault
+    # ACL policy for _lifecycle's "CheckCommitReadiness" function
+    _lifecycle/CheckCommitReadiness: /Channel/Application/Writers
+
+    # ACL policy for _lifecycle's "CommitChaincodeDefinition" function
+    _lifecycle/CommitChaincodeDefinition: /Channel/Application/Writers
+
+    # ACL policy for _lifecycle's "QueryChaincodeDefinition" function
+    _lifecycle/QueryChaincodeDefinition: /Channel/Application/Readers
+
+    # ACL policy for _lifecycle's "QueryChaincodeDefinitions" function
+    _lifecycle/QueryChaincodeDefinitions: /Channel/Application/Readers
+    
+    # ACL policy for lscc's "getid" function
+    lscc/ChaincodeExists: /Channel/Application/Readers
+
+    # ACL policy for lscc's "getdepspec" function
+    lscc/GetDeploymentSpec: /Channel/Application/Readers
+
+    # ACL policy for lscc's "getccdata" function
+    lscc/GetChaincodeData: /Channel/Application/Readers
+
+    # ACL Policy for lscc's "getchaincodes" function
+    lscc/GetInstantiatedChaincodes: /Channel/Application/Readers
+
+    #---Query System Chaincode (qscc) function to policy mapping for access control---#
+
+    # ACL policy for qscc's "GetChainInfo" function
+    qscc/GetChainInfo: /Channel/Application/Readers
+
+    # ACL policy for qscc's "GetBlockByNumber" function
+    qscc/GetBlockByNumber: /Channel/Application/Readers
+
+    # ACL policy for qscc's  "GetBlockByHash" function
+    qscc/GetBlockByHash: /Channel/Application/Readers
+
+    # ACL policy for qscc's "GetTransactionByID" function
+    qscc/GetTransactionByID: /Channel/Application/Readers
+
+    # ACL policy for qscc's "GetBlockByTxID" function
+    qscc/GetBlockByTxID: /Channel/Application/Readers
+
+    #---Configuration System Chaincode (cscc) function to policy mapping for access control---#
+
+    # ACL policy for cscc's "GetConfigBlock" function
+    cscc/GetConfigBlock: /Channel/Application/Readers
+
+    # ACL policy for cscc's "GetConfigTree" function
+    cscc/GetConfigTree: /Channel/Application/Readers
+
+    # ACL policy for cscc's "SimulateConfigTreeUpdate" function
+    cscc/SimulateConfigTreeUpdate: /Channel/Application/Readers
+
+    #---Miscellanesous peer function to policy mapping for access control---#
+
+    # ACL policy for invoking chaincodes on peer
+    peer/Propose: /Channel/Application/Writers
+
+    # ACL policy for chaincode to chaincode invocation
+    peer/ChaincodeToChaincode: /Channel/Application/Readers
+
+    #---Events resource to policy mapping for access control###---#
+
+    # ACL policy for sending block events
+    event/Block: /Channel/Application/Readers
+
+    # ACL policy for sending filtered block events
+    event/FilteredBlock: /Channel/Application/Readers
+
+
+  # Default policies
+  Policies: &ApplicationDefaultPolicies
+
+    # approveformyorg
+    LifecycleEndorsement:
+        Type: ImplicitMeta
+        # Rule: "MAJORITY Endorsement"
+        Rule: "ANY Endorsement"
+    
+    # --channel-config-policy
+    Endorsement:
+        Type: ImplicitMeta
+        Rule: "ANY Endorsement"
+
+    Readers:
+        Type: ImplicitMeta
+        Rule: "ANY Readers"
+    Writers:
+        Type: ImplicitMeta
+        Rule: "ANY Writers"
+    Admins:
+        Type: ImplicitMeta
+        Rule: "ANY Admins"
+
+    StrictAdminPolicy:
+        Type: ImplicitMeta
+        Rule: "ANY Admins"
+ 
+  Organizations:
+
+  Capabilities:
+    <<: *ApplicationCapabilities
+ 
+
+#   CHANNEL
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+        Type: ImplicitMeta
+        Rule: "ANY Readers"
+    Writers:
+        Type: ImplicitMeta
+        Rule: "ANY Writers"
+    Admins:
+        Type: ImplicitMeta
+        Rule: "ANY Admins"
+
+  Capabilities:
+    <<: *ChannelCapabilities
+  
+#   PROFILES
+Profiles:
+  RaftOrdererGenesis:
+      <<: *ChannelDefaults
+      Orderer:
+          <<: *OrdererDefaults
+          OrdererType: etcdraft
+          EtcdRaft:
+            Consenters:
+            - Host: orderer0.scada.com
+              ClientTLSCert: ../organizations/ordererOrganizations/scada.com/orderers/orderer0.scada.com/tls/server.crt
+              ServerTLSCert: ../organizations/ordererOrganizations/scada.com/orderers/orderer0.scada.com/tls/server.crt
+              Port: 7050
+            #- Host: orderer1.scada.com
+            #  ClientTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer1.scada.com/tls/server.crt
+            #  ServerTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer1.scada.com/tls/server.crt
+            #  Port: 7050
+            #- Host: orderer2.scada.com
+            #  ClientTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer2.scada.com/tls/server.crt
+            #  ServerTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer2.scada.com/tls/server.crt
+            #  Port: 7050
+            #- Host: orderer3.scada.com
+            #  ClientTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer3.scada.com/tls/server.crt
+            #  ServerTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer3.scada.com/tls/server.crt
+            #  Port: 7050
+            #- Host: orderer4.scada.com
+            #  ClientTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer4.scada.com/tls/server.crt
+            #  ServerTLSCert: ../crypto/crypto-config/ordererOrganizations/scada.com/orderers/orderer4.scada.com/tls/server.crt
+            #  Port: 7050
+          Addresses:
+            - orderer0.scada.com:7050
+            #- orderer1.scada.com:7050
+            #- orderer2.scada.com:7050
+            #- orderer3.scada.com:7050
+            #- orderer4.scada.com:7050
+          Organizations:
+              - <<: *Orderer
+          Capabilities:
+                <<: *OrdererCapabilities
+      Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - <<: *Org1               
+      Consortiums:
+        ScadaConsortium:
+            Organizations:
+                  - <<: *Org1
+
+  Org1Channel:
+    <<: *ChannelDefaults
+    Consortium: ScadaConsortium
+    Application:
+        <<: *ApplicationDefaults
+        Organizations:
+            - <<: *Org1
+
+
+
